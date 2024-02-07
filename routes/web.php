@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('articles.index', [
-        'articles' => Article::get(),
+        'articles' => Article::query()
+            ->orderBy('view_count', 'desc')
+            ->get(),
     ]);
 });
 
