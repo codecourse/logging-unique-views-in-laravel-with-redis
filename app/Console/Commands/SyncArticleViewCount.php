@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Article;
+use App\Models\Discussion;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Redis;
 
@@ -22,16 +23,23 @@ class SyncArticleViewCount extends Command
      */
     protected $description = 'Command description';
 
+    protected $models = [
+        Article::class,
+        Discussion::class,
+    ];
+
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $views = Article::select('id')->pluck('id')->map(function ($id) {
-            return ['id' => $id, 'view_count' => Redis::pfcount('articles.' . $id . '.views')];
-        })
-            ->toArray();
+        collect($this->models)->each(function ($model) {
+            $views = $model::select('id')->pluck('id')->map(function ($id) use ($model) {
+                return ['id' => $id, 'view_count' => Redis::pfcount(sprintf('%s.%s.views', (new $model)->getTable(), $id))];
+            })
+                ->toArray();
 
-        batch()->update(new Article(), $views, 'id');
+            batch()->update(new $model(), $views, 'id');
+        });
     }
 }
